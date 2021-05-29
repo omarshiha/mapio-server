@@ -1,25 +1,24 @@
-/*!
-*  geolocation-simulator.js v0.0.1
-*  (c) 2014, Russell Goldenberg
-*  MIT License
-*/
 
-(function() {
+let Simulator  = class {
+    constructor(coords, lastCoords) {
+        this.coords = [];
+        this.speed = 0;
+        this.featureId = new Date().getTime();
+        this.lastCoords= lastCoords;
+        this.KM_IN_DEGREE= 110.562;
+        this.SECONDS_IN_HOUR= 3600;
+        this.UPDATE_INTERVAL= 1000;
+    }
 
-    let lastCoords;
-    //constants
-    var KM_IN_DEGREE = 110.562,
-        SECONDS_IN_HOUR = 3600,
-        UPDATE_INTERVAL = 1000;
-    
-    var GeoSim = function(params) {
+    GeoSim(params) {
+        let this2 = this;
         var self = {};
         //private vars
         var _watchTimer = null,
             _coords = params.coords,
-            _speed = (params.speed || 40) / SECONDS_IN_HOUR, // km/second (defaults to 40kmh or 25mph)
-            _current = { 
-                coords: { 
+            _speed = (params.speed || 40) / this.SECONDS_IN_HOUR, // km/second (defaults to 40kmh or 25mph)
+            _current = {
+                coords: {
                     latitude: 0,
                     longitude: 0,
                     accuracy: 1,
@@ -35,9 +34,10 @@
             _numSteps,
             _currentStep;
 
-        //public functions            
-        self.start = function() {
+        //public functions
+        self.start = function(id) {
             nextCoord();
+            this2.featureId = id
         };
 
         //private functions
@@ -48,25 +48,25 @@
             //check if route completed
             if(_index < _coords.length - 1) {
                 var coord = _coords[_index];
-                
+
                 //set current coordinate, to make sure it makes the jump
                 _current.coords.latitude = coord.latitude;
                 _current.coords.longitude = coord.longitude;
-                
+
                 //set rate of change
                 //distance between points with direction for lat and lon (km)
-                var deltaLat = (_coords[_index+1].latitude - coord.latitude) * KM_IN_DEGREE,
-                    deltaLon = (_coords[_index+1].longitude - coord.longitude) * KM_IN_DEGREE;
-                
+                var deltaLat = (_coords[_index+1].latitude - coord.latitude) * this2.KM_IN_DEGREE,
+                    deltaLon = (_coords[_index+1].longitude - coord.longitude) * this2.KM_IN_DEGREE;
+
                 //as the crow flies distance (km)
                 var deltaDist = Math.sqrt((deltaLat * deltaLat) + (deltaLon * deltaLon));
-                
+
                 //total time between points at desired speed (sec)
                 var deltaSeconds = Math.floor(deltaDist / _speed);
 
                 //rate of change for each update (1 sec) in lat/lon
-                _rate.latitude = deltaLat / deltaSeconds / KM_IN_DEGREE;
-                _rate.longitude = deltaLon / deltaSeconds / KM_IN_DEGREE;
+                _rate.latitude = deltaLat / deltaSeconds / this2.KM_IN_DEGREE;
+                _rate.longitude = deltaLon / deltaSeconds / this2.KM_IN_DEGREE;
 
                 //total steps aka number of seconds
                 _numSteps = deltaSeconds;
@@ -78,12 +78,12 @@
                     _pauseTimeout = setTimeout(step, coord.pause);
                 } else {
                     //prpceed at regular interval
-                    setTimeout(step, UPDATE_INTERVAL);
+                    setTimeout(step, this2.UPDATE_INTERVAL);
                 }
-                lastCoords = coord;
+                this2.lastCoords = coord;
             } else {
                 _index = -1;
-                setTimeout(step, UPDATE_INTERVAL);
+                setTimeout(step, this2.UPDATE_INTERVAL);
             }
         }
 
@@ -93,44 +93,19 @@
             if(_currentStep < _numSteps) {
                 _current.coords.latitude += _rate.latitude;
                 _current.coords.longitude += _rate.longitude;
-                setTimeout(step, UPDATE_INTERVAL);
+                setTimeout(step, this2.UPDATE_INTERVAL);
             } else {
                 nextCoord();
             }
         }
 
-        //override native geolocation
-        // navigator.geolocation.getCurrentPosition = function(cb,error,options) {
-        //     cb(_current);
-        // };
-        //
-        // navigator.geolocation.watchPosition = function(cb,error,options) {
-        //     var sendPos = function() {
-        //         cb(_current);
-        //        _watchTimer = setTimeout(sendPos, 1000);
-        //     };
-        //     sendPos();
-        // };
-        //
-        // navigator.geolocation.clearWatch = function() {
-        //     clearTimeout(_watchTimer);
-        // };
-
         return self;
     };
 
-    var getLastCoords = function(){
-        return lastCoords
+    getFeatureData(){
+        return {"featureId": this.featureId, "coords": this.lastCoords};
     };
 
-    //utils
-    //add convert to radian method for numbers
-    if (typeof(Number.prototype.toRad) === "undefined") {
-        Number.prototype.toRad = function() {
-            return this * Math.PI / 180;
-        }
-    }
+};
 
-    exports.GeoSim = GeoSim;
-    exports.getLastCoords = getLastCoords
-})();
+module.exports = Simulator;

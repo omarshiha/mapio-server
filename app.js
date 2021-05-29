@@ -4,6 +4,14 @@ const options = {cors:true, origins:["http://localhost:3000"]};
 const io = require('socket.io')(server, options);
 let interval;
 
+const Simulator = require('./geolocation-simulator');
+
+let simulation1 = null;
+let simulation2 = null;
+let simulation3 = null;
+let simulation4 = null;
+
+
 io.on("connection", (socket) => {
     console.log("New client connected");
 
@@ -25,8 +33,19 @@ io.on("connection", (socket) => {
         {latitude: 42.352566, longitude: -71.067595},
         {latitude: 42.352344, longitude: -71.064591}
     ];
-    var simulation = GeolcationSimulation.GeoSim({coords: coordinates, speed: 90});
-    simulation.start();
+
+
+    simulation1 = new Simulator();
+    simulation1.GeoSim({coords: coordinates, speed: 50}).start(1);
+
+    simulation2 = new Simulator();
+    simulation2.GeoSim({coords: coordinates, speed: 90}).start(2);
+
+    simulation3 = new Simulator();
+    simulation3.GeoSim({coords: coordinates, speed: 160}).start(3);
+
+    simulation4 = new Simulator();
+    simulation4.GeoSim({coords: coordinates, speed: 120}).start(4);
 
     if (interval) {
         clearInterval(interval);
@@ -39,11 +58,13 @@ io.on("connection", (socket) => {
     });
 });
 
-const getApiAndEmit = socket => {
-    let lastLocation = GeolcationSimulation.getLastCoords();
-    console.log(lastLocation)
-    const response = new Date();
-    socket.emit("FromAPI", lastLocation);
+let getApiAndEmit = socket => {
+    let data1 = simulation1.getFeatureData();
+    let data2 = simulation2.getFeatureData();
+    let data3 = simulation3.getFeatureData();
+    let data4 = simulation4.getFeatureData();
+    let featuresData = [data1, data2, data3, data4];
+    socket.emit("FromAPI", featuresData);
 };
 
 const port = process.env.PORT || 4001;
